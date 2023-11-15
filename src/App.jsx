@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { v4 as uuid } from "uuid";
+import React, { useState, useEffect } from "react";
+import api from './api/index.js';
+
 
 
 import { Container, ToDoList, Input, Button, ListItem, Trash, Check, H3 } from "./styles.js";
@@ -8,44 +9,56 @@ function App() {
   const [list, setList] = useState([]);
   const [inputTask, setInputTask] = useState("");
 
+  async function pegarTodasAsTarefas(){
+    //consumindos os dados da API
+    const {data} = await api.get('/todos');
+    console.log(data);
+    setList(data);
+  };
+
   function inputMudou(event) {
     setInputTask(event.target.value);
-  }
+  };
 
-  function cliqueiNoBotao() {
+  async function cliqueiNoBotao() {
     if (inputTask) {
-    setList([...list, { id: uuid(), task: inputTask, finished: false }]);
-    setInputTask("")
+      await api.post('/todos', {task: inputTask});
+      pegarTodasAsTarefas();
+      setInputTask("");
+    };
+  };
+
+  async function finalizarTarefa(id, finished) {
+    await api.patch(`/todos/${id}`, {
+      finished: !finished
+    });
+    pegarTodasAsTarefas();
+  };
+
+  async function deletarItem(id) {
+    await api.delete(`/todos/${id}`);
+
+    pegarTodasAsTarefas();
   }
-}
 
-  function finalizarTarefa(id) {
-    const newList = list.map((item) =>
-      item.id === id ? { ...item, finished: !item.finished } : item
-    );
+  useEffect(() => {
+    pegarTodasAsTarefas();
 
-    setList(newList);
-  }
-
-  function deletarItem(id) {
-    const newList = list.filter((item) => item.id !== id);
-
-    setList(newList);
-  }
+  }, []);
 
   return (
     <Container>
       <ToDoList>
-        <Input onChange={inputMudou} placeholder="O que tenho que fazer..." value={inputTas} />
+        <Input onChange={inputMudou} placeholder="O que tenho que fazer..." value={inputTask} />
         <Button onClick={cliqueiNoBotao}>Adicionar</Button>
 
         <ul>
           {list.length > 0 ? (
           list.map((item) => (
-            <ListItem isFinished={item.finished} key={item.id}>
-              <Check onClick={() => finalizarTarefa(item.id)} />
+            <ListItem key={item._id} isFinished={item.finished}>
+              <Check onClick={() => finalizarTarefa(item._id, item.finished)} />
               <li>{item.task}</li>
-              <Trash onClick={() => deletarItem(item.id)} />
+              <Trash onClick={() => deletarItem(item._id)} />
             </ListItem>
           ))
           ) : (
